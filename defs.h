@@ -4,6 +4,10 @@
  * defs.h
  * 
  * $Log: defs.h,v $
+ * Revision 1.4  2000/07/21 02:34:20  ahn
+ * Change default server to pickled.psychosis.net. [ahn]
+ * Change default update rate to 10. [ahn]
+ *
  * Revision 1.3  2000/03/04 00:52:02  ahn
  * * Upped MAXPLAYER to 36.
  * * Cosmetic changes to mkdefault.c to compile under SGI CC.
@@ -158,12 +162,12 @@
 #define TARG_FRIEND     0x20
 
 #ifndef DEFAULT_SERVER
-#define DEFAULT_SERVER	"wormhole.ecst.csuchico.edu"
+#define DEFAULT_SERVER	"pickled.psychosis.net"
 #endif
 
 #define DEFAULT_PORT	2592
 
-#define DEFAULT_UPDATES_PER_SECOND	5
+#define DEFAULT_UPDATES_PER_SECOND	10
 
 /* Other stuff that Ed added */
 

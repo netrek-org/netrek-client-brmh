@@ -1084,7 +1084,7 @@ on a server basis, i.e. autologin.bigbang: on");
 #ifdef RECORD
    if(playback) {
      /* Read up to the loginAccept packets, so we are in proper sync */
-     readFromServer(sock);
+     readFromServer((int *) sock);
 #ifdef RECORD_DEBUG
      fprintf(RECORDFD, "loginAccept scan completed\n");
 #endif
@@ -1164,7 +1164,7 @@ on a server basis, i.e. autologin.bigbang: on");
    if(playback) {
      /* Read up to the pickOk packet, so we are in proper sync */
      if(!not_first_entry) {
-       readFromServer(sock);
+       readFromServer((int *) sock);
 #ifdef RECORD_DEBUG
        fprintf(RECORDFD, "pickOk scan completed\n");
 #endif

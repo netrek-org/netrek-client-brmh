@@ -57,7 +57,7 @@ struct servers {
    int             RSA_client;
 };
 
-static char    *metaserver = "metaserver.ecst.csuchico.edu";
+static char    *metaserver = "metaserver.netrek.org";
 static int      metaport = 3521;
 static struct servers *serverlist;
 static int      num_servers;

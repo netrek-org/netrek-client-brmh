@@ -5,8 +5,9 @@
 #endif
 
 /* random.c */
+#ifndef sgi
 extern void srandom P_((unsigned int x));
 extern char *initstate P_((unsigned int seed, char *arg_state, int n));
 extern char *setstate P_((char *arg_state));
 extern long random P_((void));
-
+#endif

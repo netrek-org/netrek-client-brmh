@@ -2,6 +2,8 @@ Version 2.4.1 (not released)
 	
 	* default server: pickled.psychosis.net [ahn]
 	* default to 10 updates per sec [ahn]
+	* SGI specific fixes [ahn]
+	* default metaserver: metaserver.netrek.org [ahn]
 	
 Version 2.4 released by Karthik Arumugham.
 

@@ -2,6 +2,9 @@
  * data.c
  * 
  * $Log: data.c,v $
+ * Revision 1.4  2001/02/23 03:24:35  ahn
+ * Bug fixes from John Hitt (jhitt@central.sun.com).  See ChangeLog for details.
+ *
  * Revision 1.3  2000/07/21 03:17:47  ahn
  * Update metaserver.
  *
@@ -70,7 +73,10 @@ int             showStats = 1;
 int             showShields = 1;
 int             warncount = 0;
 int             warntimer = -1;
+int             infoCycle = 0;
+int             infoCycleTime = 15;
 int             infomapped = 0;
+int             info_cycle_count = 0;
 int             keeppeace = 1;
 #ifdef GATEWAY
 unsigned long   netaddr = 0;	/* for blessing */

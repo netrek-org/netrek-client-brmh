@@ -5,6 +5,12 @@ Version 2.4.1 (not released)
 	* SGI specific fixes [ahn]
 	* default metaserver: metaserver.netrek.org [ahn]
 	
+	* Patches from John Hitt (jhitt@central.sun.com) [ahn]
+	  1) Fixes TTS in true color mode.
+	  2) Clears help window upon death.
+	  3) Info windows can auto-unmap after some time.
+	     (See updated sample xtrekrc on how to control this)
+	
 Version 2.4 released by Karthik Arumugham.
 
 2.4:	* 36 player support [ahn]

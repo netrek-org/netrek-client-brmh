@@ -32,6 +32,11 @@ readDefaults()
 
    /* Boolean defaults */
 #ifdef SHOW_DEFAULTS
+   show_defaults("display", "infoCycle", infoCycle ? "on" : "off",
+		 "Cycle info windows off automatically");
+#endif
+   infoCycle = booleanDefault("infoCycle", infoCycle);
+#ifdef SHOW_DEFAULTS
    {
       char            buf[10];
       sprintf(buf, "%d", namemode);
@@ -221,6 +226,17 @@ for default mapping and geometry (message widths 13, 32, 80 supported).");
 #endif
 
    /* Numeric defaults */
+#ifdef SHOW_DEFAULTS
+   {
+     char ints[10];
+     sprintf(ints, "%d", infoCycleTime);
+     show_defaults("display", "infoCycleTime", ints,
+		   "Time in cycles to display info window (15 ~= 5 secs)");
+   }
+#endif
+   infoCycleTime = intDefault("infoCycleTime", infoCycleTime);
+   if (infoCycleTime < 0) 
+     infoCycleTime = 15;
 #ifdef SHOW_DEFAULTS
    {
       char            ints[10];

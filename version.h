@@ -3,11 +3,11 @@
 /* program version number stuff */
 
 #ifdef nodef
-static char    *Program_Version = "$Revision: 1.4 $   Compiled on $Date: 2000/03/23 03:44:26 $";
+static char    *Program_Version = "$Revision: 1.5 $   Compiled on $Date: 2001/02/23 03:24:35 $";
 #endif
 
 #define PATCHLEVEL     0
-#define VERSION	       "2.4.0"
+#define VERSION	       "2.4.1"
 #define MAINTENANCE    "vanilla-list@us.netrek.org"
 #define URL_NETREK     "http://www.netrek.org/"
 #define URL_XTREKRC    "ftp://ftp.netrek.org/pub/netrek/clients/brmh/bin/BRMH-xtrekrc"

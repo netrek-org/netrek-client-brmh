@@ -157,6 +157,8 @@ static struct int_range bitmap_range =
 static struct int_range enemyPhaserRange =
 {0, 10, 1};
 
+static struct int_range infoCycleTimeRange =
+{5, 25, 5};
 
 /* menus */
 static
@@ -273,6 +275,9 @@ struct option   SillyFeatures2_Menu[] =
    {13, "shrink phasers", &shrink_phasers, 0, 0, 0, NULL, NULL},
    {13, "Shrink phaser amount: %d", &shrink_phasers_amount, 0, 0, 0, NULL, 
 							&shrink_phaser_range},
+   {13, "use Info Cycle", &infoCycle, 0, 0, 0, NULL, NULL},
+   {13, "Info Cycle Time: %d", &infoCycleTime, 0, 0, 0, NULL,
+    &infoCycleTimeRange},
 #endif
 #ifdef RECORD
    {14, "Record Indiv msgs", &recordIndiv, 0, 0, 0, NULL, NULL},

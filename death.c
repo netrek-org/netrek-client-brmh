@@ -66,6 +66,12 @@ death()
       showStats = 0;
    }
 
+   /* If help.parent == netrek, then if help window is up it's default
+    * location blocks selecting a new ship after death.
+    */
+   if (W_IsMapped(helpWin))
+       W_UnmapWindow(helpWin);
+
    if (infomapped)
       destroyInfo();
 

@@ -3091,9 +3091,8 @@ init_tts()
    char		*color;
    XColor	xc;
 
-   if(forceMono || DisplayCells(W_Display, W_Screen) <= 2 ||
-        (DefaultVisual(W_Display, W_Screen)->class == TrueColor)){
-      /* this is not going to work at all for b/w */
+   if(forceMono || DisplayCells(W_Display, W_Screen) <= 2 ) {
+     /* this is not going to work at all for b/w */
       tts = 0;
       return;
    }
@@ -3132,7 +3131,10 @@ init_tts()
    }
    /* using the 8th color allocated in GetColors() */
    xc.pixel = colortable[W_Black].pixelValue | planes[0] | planes[2];
-   XStoreColor(W_Display, W_Colormap, &xc);
+   if (DefaultVisual(W_Display, W_Screen)->class == TrueColor)
+     XAllocColor(W_Display, W_Colormap, &xc);
+   else
+     XStoreColor(W_Display, W_Colormap, &xc);
    values.foreground = xc.pixel;
    values.function = GXor;
 

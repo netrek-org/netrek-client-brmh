@@ -395,6 +395,12 @@ input()
 
       select(max_fd, &readfds, 0, 0, 0);
 
+      if (infomapped && infoCycle) 
+	if (info_cycle_count > infoCycleTime)
+	  destroyInfo();
+	else 
+	  info_cycle_count++;
+
       if (FD_ISSET(xsock, &readfds) || W_EventsQueued()) {
 	 process_event();
 	 /* NOTE: we're no longer calling XPending(), need this */
@@ -1039,9 +1045,12 @@ keyaction(data)
    case 'i':			/* i = get information */
    case 'I':			/* I = get extended information */
       if (!infomapped)
-	 inform(win, data->x, data->y, key);
-      else
-	 destroyInfo();
+        inform(win, data->x, data->y, key);
+      else if (infoCycle) {
+        destroyInfo();
+        inform(win, data->x, data->y, key);
+      } else
+        destroyInfo();
       break;
    case 'h':			/* h = Map help window */
       if (W_IsMapped(helpWin)) {

@@ -4,6 +4,9 @@
  * data.h
  * 
  * $Log: data.h,v $
+ * Revision 1.3  2001/02/23 03:24:35  ahn
+ * Bug fixes from John Hitt (jhitt@central.sun.com).  See ChangeLog for details.
+ *
  * Revision 1.2  2000/02/17 05:48:05  ahn
  * BRMH 2.3 from David Pinkney <dpinkney@cs.uml.edu>
  *
@@ -94,7 +97,10 @@ extern int      showStats;
 extern int      msgBeep;	/* ATM - msg beep */
 extern int      warncount;
 extern int      warntimer;
+extern int      infoCycle;
+extern int      infoCycleTime;
 extern int      infomapped;
+extern int      info_cycle_count;
 #ifdef SCAN
 extern int      scanmapped;	/* ATM - scanner stuff */
 #endif				/* ATM */

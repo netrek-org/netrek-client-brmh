@@ -256,5 +256,6 @@ destroyInfo()
 {
    W_UnmapWindow(infow);
    infomapped = 0;
+   info_cycle_count = 0;
    infow = NULL;
 }

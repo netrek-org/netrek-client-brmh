@@ -4,6 +4,12 @@
  * defs.h
  * 
  * $Log: defs.h,v $
+ * Revision 1.3  2000/03/04 00:52:02  ahn
+ * * Upped MAXPLAYER to 36.
+ * * Cosmetic changes to mkdefault.c to compile under SGI CC.
+ *
+ * - Dave Ahn
+ *
  * Revision 1.2  2000/02/17 05:48:05  ahn
  * BRMH 2.3 from David Pinkney <dpinkney@cs.uml.edu>
  *
@@ -40,7 +46,7 @@
 
 
 #ifndef MAXPLAYER
-#define MAXPLAYER 20
+#define MAXPLAYER 36
 #endif
 #define TESTERS 4		/* Priveledged slots for robots and game
 				 * 'testers' */

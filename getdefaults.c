@@ -13,6 +13,8 @@
 extern int      oldBless;	/* from main.c */
 #ifdef RECORD
 #include "recorder.h"
+#else
+#define RECORDFD stdout
 #endif
 
 void

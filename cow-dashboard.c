@@ -41,7 +41,7 @@
 
 /* cow-dashboard.c */
 static char    *itoa3 P_((int val, char *result, int pad, int prec));
-static char    *ftoa P_((float fval, char *result, int pad, int iprec, int dprec));
+/*static char    *ftoa P_((float fval, char *result, int pad, int iprec, int dprec));*/
 static void db_box P_((int x, int y, int w, int h, int f, int color));
 static void db_bar P_((char *lab, int x, int y, int value, int tmpmax, int max, int digits, int color));
 static void db_flags P_((int fr));

@@ -6,17 +6,8 @@
 	    so system-default C flags don't get passed to gcc */
                CCOPTIONS =                 
 
-                    CC = gcc
-/**
-#if 1
-           CDEBUGFLAGS = -funroll-loops -finline-functions -ffast-math -fforce-mem -Wall -O2 
-#else
-           CDEBUGFLAGS = -g
-#endif
-**/
-#if 1
-           CDEBUGFLAGS = -funroll-loops -finline-functions -ffast-math -fforce-mem -fomit-frame-pointer -Wall -O2 
-#endif
+                    CC = cc -n32 -mips3
+           CDEBUGFLAGS = -O2
 
 
 #define RSA_            YES             /* RSA */
@@ -126,7 +117,7 @@ NETREK_BIN =
 #define NoSprintf	YES		/* avoid using sprintf in a few places
 					   (it's notoriously slow) */
 #define Debug		NO		/* variables debugging */
-#define UsePortSwap	NO		/* sometimes needed */
+#define UsePortSwap	YES		/* sometimes needed */
 	 /* misc */
 #define Record		YES		/* game record option (but no f
 					   playback) */

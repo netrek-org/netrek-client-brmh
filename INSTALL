@@ -1,0 +1,41 @@
+BUILDING A BINARY
+   
+   First, do you need to build a binary?  There's a lot of client binaries
+   available already built for a wide variety of architectures.  Check
+   on cad.ics.uci.edu:/pub/netrek for the existing BRMH binaries.
+
+INSTALLATION
+   
+   1. Edit Netrek.tmpl, checking and/or setting CC, CDEBUGFLAGS, _RSA.
+      If you want to use RSA, define MP_LIB (gnu MP) and MP_INCLUDE (gnu MP).
+      If you don't have it, the GNU mp library is available on 
+      prep.ai.mit.edu.  Look for /pub/gnu/gmp*
+      Set defined OPTIONS/FEATURES as desired to YES/NO.
+      If you're not using RSA, set RSA_ to NO and skip to step 4.
+      
+   2. RSA: Get the latest RSA code from ftp.ecst.csuchico.edu (there's some 
+      kind of legal problem with having RSA code in public distributions).  
+      Contact trown@ecst.csuchico.edu for information required to decrypt 
+      the RSA code distribution.
+
+   3. RSA: 
+      * xmkmf
+      * make mkkey
+      * If you have the secret RSA key already, do 'mkkey -k <key-file>'
+	 otherwise:
+      * mkkey key_name client_type architecture/OS creator comments
+        (Be sure to quote arguments that have spaces or special shell 
+	 characters)
+      
+   4. xmkmf; make depend ; make
+
+CLIENT DETAILS
+   
+   * ./netrek -u for a description of command line options.
+   * ./netrek -v for RSA version information
+   * At runtime, select "show help window" for a list of commands.
+   * At runtime, type ^s to display the list of features/macros/RCDs
+
+COMMENTS, BUGS
+   
+   hadley@uci.edu

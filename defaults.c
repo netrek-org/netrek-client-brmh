@@ -4,6 +4,9 @@
  * Kevin P. Smith  6/11/89
  * 
  * $Log: defaults.c,v $
+ * Revision 1.3  2000/03/23 03:50:49  karthik
+ * Remove strdup() for Linux
+ *
  * Revision 1.2  2000/02/17 05:48:05  ahn
  * BRMH 2.3 from David Pinkney <dpinkney@cs.uml.edu>
  * Revision 1.6  1993/10/05  16:40:38  hadley checkin
@@ -35,7 +38,9 @@ struct stringlist {
 struct stringlist *defaults = NULL;
 
 char           *getenv();
+#ifndef linux
 char           *strdup();
+#endif
 
 #ifdef NBTDIST
 
@@ -464,6 +469,7 @@ FreeDefaults()
    defaults = NULL;
 }
 
+#ifndef linux
 #ifndef _AIX
 char           *
 strdup(str)
@@ -479,6 +485,7 @@ const
    strcpy(s, str);
    return (s);
 }
+#endif
 #endif
 
 /* kludge: look for serverName on value side of default string so we

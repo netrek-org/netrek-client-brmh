@@ -2,6 +2,9 @@
  * data.c
  * 
  * $Log: data.c,v $
+ * Revision 1.3  2000/07/21 03:17:47  ahn
+ * Update metaserver.
+ *
  * Revision 1.2  2000/02/17 05:48:05  ahn
  * BRMH 2.3 from David Pinkney <dpinkney@cs.uml.edu>
  *
@@ -395,7 +398,7 @@ int		shrink_phasers_amount = 10;
 
 char		*defaults_file = NULL;
 
-char    *metaserver = "metaserver.ecst.csuchico.edu";
+char    *metaserver = "metaserver.netrek.org";
 int      metaport = 3521;
 
 char		*plist = NULL;

@@ -2,8 +2,8 @@
  * data.c
  * 
  * $Log: data.c,v $
- * Revision 1.1  2000/01/13 19:56:55  ahn
- * Import BRMH into client source tree.
+ * Revision 1.2  2000/02/17 05:48:05  ahn
+ * BRMH 2.3 from David Pinkney <dpinkney@cs.uml.edu>
  *
  * Revision 1.6  1993/10/05  16:40:38  hadley
  * checkin
@@ -116,10 +116,6 @@ int		reportPhaserInReview = 0;	/* report phaser in review */
 
 int		phaserWindow = 0;
 
-#ifdef RECORD
-FILE           *recordFile = NULL;	/* recorder */
-int             recordGame = 0;	/* We don't record the game by default */
-#endif
 #ifdef LOGMESG
 FILE           *logFile = NULL;	/* log message to this file */
 char           *logFileName = DEFAULT_RECORDFILE;     /* Log message <isae> */
@@ -280,7 +276,9 @@ W_Window	motdWin;
 
 #ifdef EM
 int             sortPlayers = 0;
+int             teamOrder = 0;   /* DBP */
 #endif
+
 
 #ifdef ROTATERACE
 int             rotate = 0;
@@ -316,7 +314,7 @@ int             recv_short_opt = 0;
 int             recv_threshold = 0;
 char            recv_threshold_s[8] =
 {'0', '\0'};
-int             shortversion = SHORTVERSION;    /* Which version do we use? */
+int             shortversion = SHORTVERSION;  /* Which version do we use? */
 #endif
 
 int		tclock=2;

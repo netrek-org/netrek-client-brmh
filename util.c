@@ -207,6 +207,6 @@ troop_capacity()
 double
 nkills()
 {
-   /* observ only set if PFOBSERV & PFLOCK */
+   /* observ only set if PFOBSERV & PFPLOCK */
    return observ ? players[me->p_playerl].p_kills : me->p_kills;
 }

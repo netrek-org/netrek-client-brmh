@@ -8,6 +8,10 @@
 #include <ctype.h>
 #include "netrek.h"
 
+#ifdef RECORD
+#include "recorder.h"
+#endif
+
 static 
 int             notdone;	/* not done flag */
 static 
@@ -80,6 +84,12 @@ static char    *dashboardOptions[] =
  "Use COW style dashboard",
  "Use KRP style dashboard",
  "" };
+
+static char *teamorderOptions[] =
+{"Normal team order (be patient)",
+ "List my team first",
+ "List my team last",
+ ""};
 
 /* useful for options that are an int with a range */
 struct int_range {
@@ -263,6 +273,12 @@ struct option   SillyFeatures2_Menu[] =
    {13, "shrink phasers", &shrink_phasers, 0, 0, 0, NULL, NULL},
    {13, "Shrink phaser amount: %d", &shrink_phasers_amount, 0, 0, 0, NULL, 
 							&shrink_phaser_range},
+#endif
+#ifdef RECORD
+   {14, "Record Indiv msgs", &recordIndiv, 0, 0, 0, NULL, NULL},
+#endif
+#ifdef EM
+   {15, "", &teamOrder, 0, 0, 0, teamorderOptions, NULL},
 #endif
    {17, "done", &notdone, 0, 0, 0, NULL, NULL},
    {-1, NULL, 0, 0, 0, 0, NULL, NULL}

@@ -897,28 +897,6 @@ struct stats_s_spacket
 
 /* #endif SHORT_PACKETS */
 
-#ifdef RECORD
-#define RECORDPACKET(p) (\
-      p==SP_MESSAGE ||\
-      p==SP_PLAYER_INFO ||\
-      p==SP_PHASER ||\
-      p==SP_KILLS ||\
-      p==SP_PLAYER ||\
-      p==SP_YOU ||\
-      p==SP_STATUS ||\
-      p==SP_PLANET ||\
-      p==SP_LOGIN ||\
-      p==SP_FLAGS ||\
-      p==SP_MASK ||\
-      p==SP_PSTATUS ||\
-      p==SP_BADVERSION ||\
-      p==SP_HOSTILE ||\
-      p==SP_STATS ||\
-      p==SP_PL_LOGIN ||\
-      p==SP_RESERVED ||\
-      p==SP_PLANET_LOC)
-#endif /* RECORD */
-
 /* #ifdef FEATURE */
 struct feature_cpacket {                /* CP_FEATURE */
    char                 type;

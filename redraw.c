@@ -12,6 +12,10 @@
 #include <sys/time.h>
 #include "netrek.h"
 
+#ifdef RECORD
+#include "recorder.h"
+#endif
+
 #if __STDC__ || defined(__cplusplus)
 #define P_(s) s
 #else
@@ -90,12 +94,103 @@ intrupt(readfds)
 #endif
 
 #ifdef EM
-      if (sortPlayers)
-	 Sorted_playerlist2();
+      if (sortPlayers) {
+	if(!teamOrder)               /* DBP */
+	  Sorted_playerlist2();
+	else Sorted_playerlist3();   /* DBP */
+      }
 #endif
 
+#ifdef RECORD
+      if(!playback || playback_update)
+#endif
       redraw();
+
+#ifdef RECORD
+      if(playback) {
+	if(playback_update) {
+	  playback_update = 0;
+	  /* fprintf(stderr, "reset playback_update to 0\n"); */
+	}
+
+	if(pb_mode == SCAN) {
+	  /* Record our current alert status */
+
+	  switch(pb_alert_scan) {
+	  case PB_RED:
+	    if(pb_alert == PB_RED && me->p_flags & PFRED) {
+	      /* We started scan in red-alert, keep looking for next one */
+	      ;
+	    }
+	    else {
+	      if(me->p_flags & PFRED) {
+		pb_alert = PB_RED;  /* Found our status, pause */
+		pb_paused = 1;
+		db_redraw(1);
+	      }
+	      else {
+		pb_alert = PB_NONE;
+	      }
+	    }
+	    break;
+	  case PB_YELLOW:
+	    if(pb_alert == PB_YELLOW && me->p_flags & PFYELLOW) {
+	      /* We started scan in yellow-alert, keep looking for next one */
+	      ;
+	    }
+	    else {
+	      if(me->p_flags & PFYELLOW) {
+		pb_alert = PB_YELLOW;  /* Found our status, pause */
+		pb_paused = 1;
+		db_redraw(1);
+	      }
+	      else pb_alert = PB_NONE;
+	    }
+	    break;
+	  case PB_GREEN:
+	    if(pb_alert == PB_GREEN && me->p_flags & PFGREEN) {
+	      /* We started scan in green-alert, keep looking for next one */
+	      ;
+	    }
+	    else {
+	      if(me->p_flags & PFGREEN) {
+		pb_alert = PB_GREEN;  /* Found our status, pause */
+		pb_paused = 1;
+		db_redraw(1);
+	      }
+	      else pb_alert = PB_NONE;
+	    }
+	    break;
+	  case PB_DEATH:
+	    if(pb_alert == PB_DEATH && me->p_status != PALIVE) {
+	      /* We started scan dead, keep looking for next one */
+	      ;
+	    }
+	    else {
+	      if(me->p_status != PALIVE) {
+		pb_alert = PB_DEATH;  /* Found our status, pause */
+		pb_paused = 1;
+		db_redraw(1);
+	      }
+	      else pb_alert = PB_NONE;
+	    }
+	    break;
+	  case PB_NONE:
+	  default:
+	    break;
+	  }  /* switch(pb_alert_scan) */
+	}  /* if(pb_mode == SCAN) */
+      }  /* if(playback)  */
+
+#endif
+
       /* regular player list called from redraw */
+
+#ifdef RECORD
+      if(recordGame)
+	recordUpdate();
+#endif
+
    }
    if (reinitPlanets) {
       initPlanets();
@@ -205,6 +300,13 @@ redraw()
 
    W_FlushLineCaches(w);
 
+#ifdef RECORD
+   if(playback && update_dashboard) {
+     db_redraw(1);
+     update_dashboard = 0;
+   }
+   else
+#endif
    db_redraw(0);
 
    if (W_IsMapped(statwin))
@@ -414,7 +516,21 @@ local()
       if ((j->p_status != PALIVE) && (j->p_status != PEXPLODE))
 	 continue;
 
-      if(j->p_flags & PFOBSERV) continue;	/* INL */
+      /***
+      if(j->p_flags & PFOBSERV) 
+	continue;	* INL *
+      ***/
+
+      /* DBP */
+      /* Only draw observer's ship if it's me, I'm locked onto a player, 
+	 and the player is cloaked.  For non-cloaked ship, we pick it up
+	 seperately when the observed player's ship is drawn. */
+      if(j->p_flags & PFOBSERV) {  /* j is an observer */
+	if(j != me || !(me->p_flags & PFPLOCK)) /* I am j and player locked */
+	  continue;
+	else if(!((&players[me->p_playerl])->p_flags & PFCLOAK)) /* cloaked */
+	  continue;
+      }
 
       nplayers++;
       if (j->p_flags & PFCLOAK) {

@@ -21,6 +21,10 @@
 
 #include "bitmaps/clockbitmap.h"
 
+#ifdef RECORD
+#include "recorder.h"
+#endif
+
 struct list {
    char            bold;
    struct list    *next;
@@ -184,8 +188,11 @@ entrywindow(team, s_type)
 	    /* this info is updated only once per second anyway */
 	    if (W_IsMapped(playerw)) {
 #ifdef EM
-	       if (sortPlayers)
-		  Sorted_playerlist2();
+	      if (sortPlayers) {
+		if(!teamOrder)                 /* DBP */
+		  Sorted_playerlist2();  
+		else Sorted_playerlist3();     /* DBP */
+	      }
 	       else
 #endif
 		  playerlist2();
@@ -435,6 +442,11 @@ teamRequest(team, ship)
 	 break;
       }
    }
+
+#ifdef RECORD
+   teamReq = team;
+#endif
+
    return (pickOk);
 }
 

@@ -34,6 +34,10 @@
 #endif				/* _IBMR2 */
 #include "netrek.h"
 
+#ifdef RECORD
+#include "recorder.h"            /* only needed while debugging features */
+#endif
+
 /* not the actual packets: this holds a list of features to report for */
 /* this client. */
 struct feature {
@@ -104,6 +108,13 @@ checkFeature(packet)
 	  ntohl(packet->value));
 #endif
 
+#ifdef RECORD_DEBUG
+   fprintf(RECORDFD,
+	   "%s: %s(%d)\n", &packet->name[0], ((ntohl(packet->value) == 1) ? 
+		"ON" : (ntohl(packet->value) == 0) ? "OFF" : "UNKNOWN"),
+	  ntohl(packet->value));
+#endif
+
    for (i = 0; features[i].name != 0; i++) {
       if (feature_cmp(packet->name, features[i].name)) {
 	 /*
@@ -123,7 +134,8 @@ checkFeature(packet)
       }
    }
    if (features[i].name == 0) {
-      printf("Feature %s from server unknown to client!\n", packet->name);
+      fprintf(stderr, "Feature %s from server unknown to client!\n", 
+	      packet->name);
    }
 }
 
@@ -133,8 +145,14 @@ reportFeatures()
 {
    struct feature *f;
 
+#ifdef RECORD_DEBUG
+   fprintf(RECORDFD, "F_server_feature_packets=%d\n",
+	   F_server_feature_packets);
+#endif
+
    if (!F_server_feature_packets)
       return;
+
 
    for (f = features; f->name != 0; f++) {
       if(f->send_w_rsa)
@@ -144,6 +162,10 @@ reportFeatures()
 		     (f->arg1 ? *f->arg1 : 0),
 		     (f->arg2 ? *f->arg2 : 0));
       /* otherwise it was already sent (FEATURE_PACKETS, MOTD_BITMAPS) */
+#ifdef RECORD_DEBUG
+      fprintf(RECORDFD,
+	      "Send:(C->S) %s (%c): %d\n", f->name, f->feature_type, f->value);
+#endif
 #ifdef DEBUG
       printf("(C->S) %s (%c): %d\n", f->name, f->feature_type, f->value);
 #endif
@@ -203,3 +225,42 @@ showFeatures()
 	 *f->var?" ON":"OFF", 3, W_RegularFont);
    }
 }
+
+
+#ifdef RECORD
+int paradise_feature_fix()
+{
+  struct feature *f;
+
+#ifdef RECORD_DEBUG
+  fprintf(RECORDFD, "paradise_feature_fix() called\n");
+#endif
+
+  if(!F_server_feature_packets)
+    return 0;
+
+  for(f = features; f->name != 0; f++) {
+    if(!(strcmp(f->name, "SHIP_CAP"))) {
+#ifdef RECORD_DEBUG
+      fprintf(RECORDFD, "Disabling SHIP_CAP feature for paradise compat.\n");
+#endif
+      /* wipe out the SHIP_CAP feature, paradise doesn't understand it */
+      /*****
+      f->name = NULL;
+      f->var = NULL;
+      f->feature_type = '\0';
+      f->value = 0;
+      f->arg1 = NULL;
+      f->arg2 = NULL;
+      f->send_w_rsa = 0;
+      *****/
+      /* Don't wipe it out, turn it off */
+      f->value = 0;
+      f->send_w_rsa = 0;   /* We sent it earlier with FEATURE_PACKETS and
+			      MOTD_BITMAPS (from main) */
+    }
+  }
+  return 0;
+}
+
+#endif

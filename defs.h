@@ -4,8 +4,8 @@
  * defs.h
  * 
  * $Log: defs.h,v $
- * Revision 1.1  2000/01/13 19:56:55  ahn
- * Import BRMH into client source tree.
+ * Revision 1.2  2000/02/17 05:48:05  ahn
+ * BRMH 2.3 from David Pinkney <dpinkney@cs.uml.edu>
  *
  * Revision 1.6  1993/10/05  16:40:38  hadley
  * checkin

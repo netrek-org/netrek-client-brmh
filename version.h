@@ -3,14 +3,14 @@
 /* program version number stuff */
 
 #ifdef nodef
-static char    *Program_Version = "$Revision: 1.1 $   Compiled on $Date: 2000/01/13 19:56:56 $";
+static char    *Program_Version = "$Revision: 1.2 $   Compiled on $Date: 2000/02/17 05:48:05 $";
 #endif
 
-#define PATCHLEVEL		3
-#define VERSION			"2.2"
-#define MAINTENANCE		"hadley@uci.edu"
-#define URL_NETREK 		"http://factoryx.factoryx.com"
-#define URL_XTREKRC		"ftp://cad.ics.uci.edu/pub/netrek/BRMH-xtrekrc"
-#define URL_FTP			"ftp://cad.ics.uci.edu/pub/netrek/BRMH.html"
+#define PATCHLEVEL     0
+#define VERSION	       "2.3"
+#define MAINTENANCE    "dpinkney@cs.uml.edu"
+#define URL_NETREK     "http://www.us.netrek.org/"
+#define URL_XTREKRC    "ftp://ftp.us.netrek.org/pub/games/netrek/clients/brmh/BRMH-xtrekrc"
+#define URL_FTP	       "ftp://ftp.us.netrek.org/pub/games/netrek/clients/brmh/BRMH.html"
 
 #endif

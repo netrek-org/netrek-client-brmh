@@ -14,6 +14,10 @@
 #include <stdlib.h>
 #include "netrek.h"
 
+#ifdef RECORD
+#include "recorder.h"
+#endif
+
 #define DEFAULT		"nTRNKWLr O D d "
 #define NP_DEFAULT	"nTRN K     lM"
 
@@ -362,6 +366,123 @@ pline(j, pos)
  * ===========================================================================
  * */
 
+/*
+ *  DBP:  If teamOrder is set, order the players team according to:
+ *        teamOrder == 1:   First
+ *        teamOrder >= 2:   Last
+ */
+
+void
+Sorted_playerlist3()
+{
+   register                     h, i;
+   register int                 p = -1;
+   register struct player       *j;
+   static int Pos[MAXPLAYER];
+   static int Order[NUMTEAM+1];   /* plus IND */
+   static int firstCall=1;
+   int myteam=0;
+
+   if(firstCall) {
+
+     /* Init team Order */
+     Order[0] = 0;
+     for(i=1; i < NUMTEAM+1; i++)
+       Order[i] = 1 << (i-1);
+
+     if(~(me->p_team) & ALLTEAM) {
+       /* Set the team order after we have a team selected */
+       firstCall = 0;
+       
+       /* Init Order */
+       if(me->p_team == 0)
+	 myteam = 0;
+
+       for(i=1; i < NUMTEAM+1; i++) {
+	 if(me->p_team == Order[i])
+	   myteam = i;
+       }
+
+       
+       /* Make our team either first or last in the order */
+       /* Leave IND as very first though */
+
+       if(teamOrder == 1) {                  /* First */
+	 for(i=myteam; i != 1; i--)
+	   Order[i] = Order[i-1];
+	 Order[i] = me->p_team;
+       }
+       else {                                /* Last */
+	 for(i=myteam; i < NUMTEAM; i++)
+	   Order[i] = Order[i+1];
+	 Order[i] = me->p_team;
+       }
+     }
+   }
+   else {  
+     /* Check to see if we changed teams */
+     if((teamOrder == 1 && me->p_team != Order[1]) ||
+	(teamOrder >= 2 && me->p_team != Order[NUMTEAM])) {
+       
+       /* restore Order to defaults */
+       Order[0] = 0;
+       if(me->p_team == 0)
+	 myteam = 0;
+
+       for(i=1; i < NUMTEAM+1; i++) {
+	 Order[i] = 1 << (i-1);
+	 if(me->p_team == Order[i])
+	   myteam = i;
+       }
+       
+       if(teamOrder == 1) {                /* First */
+	 for(i=myteam; i != 1; i--)
+	   Order[i] = Order[i-1];
+	 Order[i] = me->p_team;
+       }
+       else {                              /* Last */
+	 for(i=myteam; i < NUMTEAM; i++)  
+	   Order[i] = Order[i+1];
+	 Order[i] = me->p_team;
+       }
+     }
+   }
+   
+
+
+   for(h= 0; h < NUMTEAM+1; h++){
+      for(i=0,j=players; i< MAXPLAYER; i++,j++){
+         if(!j->p_status) continue;
+
+         if(j->p_team != Order[h])
+            continue;
+         
+         p++;
+         if(!updatePlayer[i] && Pos[p] == i)
+            continue;
+         
+         Pos[p] = i;
+         updatePlayer[i] = 0;
+
+         if (!plshowstatus && j->p_status != PALIVE)
+            W_ClearArea(playerw, 0, p+2, header_len, 1);
+         else
+            pline(j, p+2);
+      }
+   }
+   for(p++; p< MAXPLAYER; p++){
+      if(Pos[p] != -1){
+         Pos[p] = -1;
+         W_ClearArea(playerw, 0, p+2, header_len, 1);
+      }
+   }
+}
+
+
+/*
+ * ===========================================================================
+ * */
+
 void
 Sorted_playerlist2()
 {
@@ -414,8 +535,10 @@ playerlist2()
       return;
 
    if (sortPlayers) {
-      Sorted_playerlist2();
-      return;
+     if(!teamOrder)                 /* DBP */
+       Sorted_playerlist2();
+     else Sorted_playerlist3();     /* DBP */
+     return;
    }
 
    for (i = 0, j = &players[i]; i < MAXPLAYER; i++, j++) {

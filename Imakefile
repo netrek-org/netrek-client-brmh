@@ -80,6 +80,11 @@ META_SRCS = metaserver.c
 META_OBJS = metaserver.o
 #endif
 
+#if Record || RecordDebug
+RECORD_SRCS = recorder.c
+RECORD_OBJS = recorder.o
+#endif
+
 SRCS = colors.c data.c death.c defaults.c defwin.c detonate.c dmessage.c \
        enter.c entrywin.c findslot.c getdefaults.c getname.c \
        getship.c helpwin.c inform.c input.c interface.c \
@@ -88,7 +93,8 @@ SRCS = colors.c data.c death.c defaults.c defwin.c detonate.c dmessage.c \
        rotate.c sintab.c smessage.c socket.c stats.c udpopt.c util.c war.c \
        warning.c x11window.c $(NETSTAT_SRCS) $(DYN_SRCS) $(BD_SRCS) \
        $(SPTEST_SRCS) $(RSA_SRCS) $(RAND_SRCS) $(RINT_SRCS) $(FEATURE_SRCS) \
-       $(SP_SRCS) $(DASHBOARD_SRCS) $(FONTBITMAP_SRCS) $(META_SRCS)
+       $(SP_SRCS) $(DASHBOARD_SRCS) $(FONTBITMAP_SRCS) $(META_SRCS) \
+       $(RECORD_SRCS)
 
 
 OBJS = colors.o data.o death.o defaults.o defwin.o detonate.o dmessage.o \
@@ -99,7 +105,8 @@ OBJS = colors.o data.o death.o defaults.o defwin.o detonate.o dmessage.o \
        rotate.o sintab.o smessage.o socket.o stats.o udpopt.o util.o war.o \
        warning.o x11window.o $(NETSTAT_OBJS) $(RAND_OBJS) $(RINT_OBJS) \
        $(DYN_OBJS) $(BD_OBJS) $(SPTEST_OBJS) $(RSA_OBJS) $(FEATURE_OBJS) \
-       $(SP_OBJS) $(DASHBOARD_OBJS) $(FONTBITMAP_OBJS) $(META_OBJS)
+       $(SP_OBJS) $(DASHBOARD_OBJS) $(FONTBITMAP_OBJS) $(META_OBJS) \
+       $(RECORD_OBJS)
 
 AllTarget(randomize)
 NormalProgramTarget(randomize,randomize.o $(RAND_OBJS),,,)

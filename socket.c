@@ -62,6 +62,10 @@ void            exit(int status);
 #endif				/* sgi */
 #endif				/* NEED_EXIT */
 
+#ifdef RECORD
+#include "recorder.h"
+#endif RECORD
+
 #ifdef SHORT_PACKETS
 static char     numofbits[256] =
 {0, 1, 1, 2, 1, 2, 2, 3, 1, 2, 2, 3, 2, 3, 3, 4, 1,
@@ -158,6 +162,7 @@ static void handleShipCap P_((struct ship_cap_spacket *packet));
 static void new_flags P_((unsigned int data, int which));
 
 static void processBitmap P_((struct bitmap_spacket * packet, int size, char *bits));
+static int sock_read P_((int sock, char *buff, int size));
 
 #undef P_
 
@@ -682,7 +687,7 @@ callServer(port, server)
 	 /* now block waiting for reply */
 	 count = sizeof(struct mesg_spacket);
 	 for (buf = (char *) &reply; count; buf += n, count -= n) {
-	    if ((n = read(s, buf, count)) <= 0) {
+	    if ((n = sock_read(s, buf, count)) <= 0) {
 	       perror("trekhopd read");
 	       exit(1);
 	    }
@@ -704,7 +709,13 @@ callServer(port, server)
    }
 #endif				/* TREKHOPD */
 
+#ifdef RECORD
+   if(recordGame)
+     startRecorder();
+#endif
+
    pickSocket(port);		/* new socket != port */
+
 }
 
 int
@@ -718,6 +729,11 @@ socketPause()
 {
    struct timeval  timeout;
    fd_set          readfds;
+
+#ifdef RECORD
+   if(playback)
+     return;
+#endif
 
    timeout.tv_sec = 1;
    timeout.tv_usec = 0;
@@ -735,6 +751,32 @@ readFromServer(readfds)
     fd_set         *readfds;
 {
    int             retval = 0;
+
+#ifdef RECORD
+   if(playback) 
+     {
+       if(!me) {
+	 while(!me)        /* read up to the handleSelf[short] to satisfy */
+	   doRead(sock);   /* findslot() */
+       }
+       else if(loginAccept < 1) {
+	 while(loginAccept < 1)
+	   doRead(sock);
+	 /* there always seem to be 2 handleLogin packets, grab another */
+	 /* doRead(sock);  loginAccept is >=1 on the 2nd one, no need    */
+       }
+       else if(pickOk < 1) { /* read up to the handlePickok to simulate */
+	 while(pickOk < 1)   /* entrywin () */
+	   doRead(sock);
+       }
+       else {
+	 while(!playback_update)
+	   doRead(sock);
+       }
+       
+       return 1;
+     }
+#endif
 
    if (serverDead)
       return (0);
@@ -839,7 +881,7 @@ doRead(asock)
    timeout.tv_sec = 0;
    timeout.tv_usec = 0;
 
-   count = read(asock, buf, BUFSIZE - /* space for packet frag */ BUFSIZE / 4);
+   count = sock_read(asock, buf, BUFSIZE - /* space for packet frag */ BUFSIZE / 4);
 #ifdef NETSTAT
    if (netstat &&
        (asock == udpSock ||
@@ -894,6 +936,12 @@ doRead(asock)
    }
    bufptr = buf;
    while (bufptr < buf + count) {
+#ifdef RECORD
+     if(playback && *bufptr == RECORD_UPDATE)
+       size = 4;
+     else
+#endif
+   {
       if (*bufptr < 1 || *bufptr > NUM_PACKETS || handlers[(int) *bufptr].size == 0) {
 	 fprintf(stderr, "Unknown packet type: %d\n", *bufptr);
 #ifndef CORRUPTED_PACKETS
@@ -906,10 +954,18 @@ doRead(asock)
 	 return (0);
       }
       size = handlers[(int) *bufptr].size;
+   }  /* playback */
+
       if (size == -1) {		/* variable packet */
 	 switch (*bufptr) {
 #ifdef SHORT_PACKETS
 	 case SP_S_MESSAGE:
+#ifdef RECORD
+	   if(playback)   
+	     /* reading 4 bytes at a time from playback file, need to read the
+	      fifth to get the correct size for this packet*/
+	     count += sock_read(asock, buf+count, 1);
+#endif
 	    size = ((unsigned char) bufptr[4]);	/* IMPORTANT  Changed */
 	    break;
 	 case SP_S_WARNING:
@@ -956,6 +1012,7 @@ doRead(asock)
 	       break;
 	    }
 	    break;
+
 	 case SP_S_KILLS:	/* S_P2 */
 	    size = ((unsigned char) bufptr[1] * 2) + 2;
 	    break;
@@ -973,7 +1030,8 @@ doRead(asock)
 	    size += (4 - (size % 4));
 	 }
 	 if (size <= 0) {
-	    fprintf(stderr, "Bad short-packet size value (%d)\n", size);
+	    fprintf(stderr, "Bad short-packet size value (%d) on packet %d\n",
+		    size, *bufptr);
 	    return 0;
 	 }
       }
@@ -995,6 +1053,10 @@ doRead(asock)
 	 /*
 	  * printf("frag\n");
 	  */
+#ifdef RECORD
+	if(!playback)
+#endif
+      {
 	 timeout.tv_sec = 20;
 	 timeout.tv_usec = 0;
 	 FD_ZERO(&readfds);
@@ -1005,7 +1067,9 @@ doRead(asock)
 	    serverDead = 1;
 	    return (0);
 	 }
-	 temp = read(asock, buf + count, size - (count + (buf - bufptr)));
+      }  /* playback */
+
+	 temp = sock_read(asock, buf + count, size - (count + (buf - bufptr)));
 	 /*
 	  * printf("read %d, trying for %d\n", temp, size -
 	  * (count+(buf-bufptr)));
@@ -1020,45 +1084,77 @@ doRead(asock)
 	    return (0);
 	 }
       }
+
+
+#ifdef RECORD
+
+      if(playback) {
+	packets_recorded++;    /* packets read if playback */
+#ifdef RECORD_DEBUG
+	fprintf(RECORDFD, "Read packet %3d, size %3d\n", *bufptr, size);
+#endif
+      }
+
+      if(playback && (*bufptr == RECORD_UPDATE)) {
+	playback_update++;
+	updates_recorded++;
+	me->p_tractor = bufptr[1];
+	if(me->p_flags & PFPLOCK)
+	  me->p_playerl = bufptr[2];
+	else me->p_planet = bufptr[2];
+      }
+      else 
+#endif
+   {
       if (handlers[(int) *bufptr].handler != NULL) {
 	 if (asock != udpSock ||
 	     (!drop_flag || *bufptr == SP_SEQUENCE || *bufptr == SP_SC_SEQUENCE)) {
 	    if (debug)
 	       printf("T- %3d %d\n", *bufptr, size);
 #ifdef RECORD
-	    if (recordGame && recordFile != NULL && RECORDPACKET(*bufptr))
-	       if ((fwrite(bufptr, size, 1, recordFile) != 1) ||
-		   (putc(*bufptr, recordFile) == EOF)) {
-		  perror("write: (recordFile)");
-		  fclose(recordFile);
-		  recordFile = NULL;
-	       }
+	    if(recordGame) {
+	      if(RECORDPACKET(*bufptr))
+		recordPacket(bufptr, size);
+#ifdef RECORD_DEBUG
+	      else fprintf(RECORDFD, "Skip packet %3d\n",
+			   (int)(*bufptr));
 #endif
-
+	    }
+#endif
+	    
 #ifdef PACKET_LOG
 	    if (log_packets)
-	       (void) Log_Packet((char) (*bufptr), size);
+	      (void) Log_Packet((char) (*bufptr), size);
 #endif
 #ifdef PING
 	    if (asock == udpSock)
-	       packets_received++;
+	      packets_received++;
 #endif
 
 	    (*(handlers[(int) *bufptr].handler)) (bufptr);
 	 } else {
 	    if (debug) {
 	       if (drop_flag)
-		  printf("%d bytes dropped.\n", size);
+		 fprintf(stderr, "%d bytes dropped.\n", size);
 	    }
 	    UDPDIAG(("Ignored type %d\n", *bufptr));
 	 }
-      } else {
-	 printf("Handler for packet %d not installed...\n", *bufptr);
       }
-
+      else {
+	fprintf(stderr, "Handler for packet %d not installed...\n", *bufptr);
+      }
+   }  /* playback- not a RECORD_UPDATE */
       bufptr += size;
 
 #ifdef nodef
+
+#ifdef RECORD
+      if(playback) {
+	count = BUFSIZE;
+      }
+      else
+#endif
+    {
       if (bufptr > buf + BUFSIZ) {
 	 MCOPY(buf + BUFSIZ, buf, BUFSIZ);
 	 if (count == BUFSIZ * 2) {
@@ -1067,7 +1163,11 @@ doRead(asock)
 	    FD_SET(asock, &readfds);
 	    /* readfds = 1<<asock; */
 	    if ((temp = select(max_fd, &readfds, 0, 0, &timeout)) > 0) {
-	       temp = read(asock, buf + BUFSIZ, BUFSIZ);
+	       temp = sock_read(asock, buf + BUFSIZ, BUFSIZ);
+#ifdef RECORD_DEBUG
+	       if(recordGame || playback)
+		 fprintf(RECORDFD, "In this other doRead frag area...\n");
+#endif
 	       if (debug)
 		  printf("R- %8d: %d b %s (frag2)\n",
 			 mstime(), temp, asock == udpSock ? "UDP" : "TCP");
@@ -1085,10 +1185,12 @@ doRead(asock)
 	 }
 	 bufptr -= BUFSIZ;
       }
+    }  /* playback */
 #endif
    }
    return (1);
 }
+
 
 static void
 handleTorp(packet)
@@ -1325,6 +1427,13 @@ handleSelf(packet)
       return;
    }
 #endif
+
+#ifdef RECORD_DEBUG
+   if(recordGame || playback)
+     fprintf(RECORDFD, "handleSelf packet, me set to player %d\n", 
+	     packet->pnum);
+#endif
+
    me = &players[packet->pnum];
    myship = &(me->p_ship);
    mystats = &(me->p_stats);
@@ -1353,6 +1462,13 @@ handleSelf(packet)
    me->p_wtemp = ntohs(packet->wtemp);
    me->p_whydead = ntohs(packet->whydead);
    me->p_whodead = ntohs(packet->whodead);
+
+#ifdef RECORD_DEBUG
+   if(recordGame || playback)
+     fprintf(RECORDFD, "handleSelf: observ=%d, fuel=%d\n", observ, me->p_fuel);
+#endif
+
+
 #ifdef INCLUDE_VISTRACT
    if (packet->tractor & 0x40)
       me->p_tractor = (short) packet->tractor & (~0x40);	/* ATM - visible
@@ -1369,6 +1485,13 @@ static void
 handleSelfShort(packet)
     struct youshort_spacket *packet;
 {
+
+#ifdef RECORD_DEBUG
+  if(recordGame || playback)
+    fprintf(RECORDFD, "handleSelfShort: setting me to pnum %d\n", 
+	    packet->pnum);
+#endif
+
    me = &players[packet->pnum];
    myship = &(me->p_ship);
    mystats = &(me->p_stats);
@@ -1384,6 +1507,13 @@ handleSelfShort(packet)
       observ = me->p_flags & PFOBSERV;
    }
    else observ = 0;
+
+#ifdef RECORD_DEBUG
+   if(recordGame || playback)
+     fprintf(RECORDFD, "handleSelfShort: observ = %d, me->p_playerl=%d\n", 
+	   observ, me->p_playerl);
+#endif
+
 }
 
 static void
@@ -1398,6 +1528,11 @@ handleSelfShip(packet)
    me->p_fuel = ntohs(packet->fuel);
    me->p_etemp = ntohs(packet->etemp);
    me->p_wtemp = ntohs(packet->wtemp);
+
+#ifdef RECORD_DEBUG
+   if(recordGame || playback)
+     fprintf(RECORDFD, "handleSelfShip, fuel=%d\n", me->p_fuel);
+#endif
 
 #ifdef FEATURE
    if (F_self_8flags)
@@ -2145,6 +2280,16 @@ handlePickok(packet)
     struct pickok_spacket *packet;
 {
    pickOk = packet->state;
+
+#ifdef RECORD
+#ifdef RECORD_DEBUG
+   if(recordGame || playback)
+     fprintf(RECORDFD, "handlePickok: pickOk=%d\n", pickOk);
+#endif
+   if(playback)
+     teamReq = packet->pad2;
+#endif
+
 }
 
 void
@@ -2170,6 +2315,7 @@ handleLogin(packet)
     struct login_spacket *packet;
 {
    loginAccept = packet->accept;
+
 #ifdef wait
    if ((packet->pad2 == 69) && (packet->pad3 == 42)) {
       fprintf(stderr,
@@ -2182,7 +2328,12 @@ handleLogin(packet)
    }
 #endif
 
-   if (packet->accept) {
+#ifdef RECORD_DEBUG
+   if(recordGame || playback)
+     fprintf(RECORDFD, "handleLogin: accept=%d, me=%p\n", packet->accept, me);
+#endif
+
+   if (/* me  DBP && */ packet->accept) {
       /*
        * no longer needed .. we have it in xtrekrc MCOPY(packet->keymap,
        * mystats->st_keymap, 96);
@@ -2493,6 +2644,9 @@ handleBitmap(packet)
    static char    *curr_bits, *curr_bits_i;
 
 #ifdef CORRUPTED_PACKETS
+#ifdef RECORD
+   if(!playback)
+#endif
    if (chan != sock) {
       fprintf(stderr, "garbage packet discarded.\n");
       return;
@@ -2657,6 +2811,12 @@ gwrite(fd, buf, bytes)
 {
    long            orig = bytes;
    register long   n;
+
+#ifdef RECORD
+   if(playback)
+     return bytes;
+#endif
+
    while (bytes) {
       n = write(fd, buf, bytes);
       if (n < 0) {
@@ -2673,6 +2833,7 @@ gwrite(fd, buf, bytes)
    }
    return (orig);
 }
+
 
 static void
 handleHostile(packet)
@@ -2704,7 +2865,17 @@ handlePlyrLogin(packet)
 {
    register struct player *pl;
 
+
+#ifdef RECORD_DEBUG
+   if(recordGame || playback)
+     fprintf(RECORDFD, "handlePlyrLogin: me=%p, packet->pnum=%d, name=%15s\n", 
+	     me, packet->pnum, packet->name);
+#endif
+
 #ifdef CORRUPTED_PACKETS
+#ifdef RECORD
+   if(!playback)
+#endif
    if (chan == udpSock) {
       fprintf(stderr, "garbage packet discarded.\n");
       return;
@@ -2742,7 +2913,7 @@ handlePlyrLogin(packet)
     * pl->p_login);
     */
 
-   if (packet->pnum == me->p_no) {
+   if (/* me dbp && */ packet->pnum == me->p_no) {
       /* This is me.  Set some stats */
       if (lastRank == -1) {
 	 if (loggedIn) {
@@ -2769,6 +2940,7 @@ handlePlyrLogin(packet)
    }
 #endif
 }
+
 
 static void
 handleStats(packet)
@@ -2822,6 +2994,13 @@ handlePlyrInfo(packet)
    }
 #endif
 
+#ifdef RECORD_DEBUG
+   if(recordGame || playback)
+     fprintf(RECORDFD, "handlePlyrInfo: pnum=%d, curship=%d, new=%d, lastship=%d\n",
+	  packet->pnum, players[packet->pnum].p_ship.s_type, packet->shiptype,
+	   lastship);
+#endif
+
    updatePlayer[(int) packet->pnum] = 1;
    pl = &players[packet->pnum];
    getship(&pl->p_ship, packet->shiptype);
@@ -2843,7 +3022,9 @@ handlePlyrInfo(packet)
 	 mykeymap = keymaps[myship->s_type];
       else
 	 mykeymap = keymaps[KEYMAP_DEFAULT];
+
       lastship = me->p_ship.s_type;
+
    }
    redrawPlayer[(int) packet->pnum] = 1;
 }
@@ -2909,6 +3090,9 @@ handleReserved(packet)
    struct reserved_cpacket response;
 
 #ifdef CORRUPTED_PACKETS
+#ifdef RECORD
+   if(!playback)
+#endif
    if (chan == udpSock) {
       fprintf(stderr, "garbage Reserved packet discarded.\n");
       return;
@@ -3014,6 +3198,11 @@ handleRSAKey(packet)
    sendServerPacket(&response);
 
 #ifdef FEATURE
+#ifdef RECORD
+   if(paradise_compat)
+     paradise_feature_fix();
+#endif
+
    reportFeatures();
 #endif
 
@@ -3173,6 +3362,7 @@ sendUdpReq(req)
       udprefresh(UDP_STATUS);
 }
 
+
 static void
 handleUdpReply(packet)
     struct udp_reply_spacket *packet;
@@ -3267,6 +3457,7 @@ handleUdpReply(packet)
    }
 }
 
+
 #define MAX_PORT_RETRY  10
 int
 openUdpConn()
@@ -3274,6 +3465,11 @@ openUdpConn()
    struct sockaddr_in addr;
    struct hostent *hp;
    int             attempts;
+
+#ifdef RECORD
+   if(playback)
+     return 0;
+#endif
 
    if (udpSock >= 0) {
       fprintf(stderr, "netrek: tried to open udpSock twice\n");
@@ -3347,6 +3543,11 @@ connUdpConn()
    struct sockaddr_in addr;
    int             len;
 
+#ifdef RECORD
+   if(playback)
+     return 0;
+#endif
+
    addr.sin_addr.s_addr = serveraddr;
    addr.sin_family = AF_INET;
    addr.sin_port = htons(udpServerPort);
@@ -3382,6 +3583,11 @@ recvUdpConn()
    struct timeval  to;
    struct sockaddr_in from;
    int             fromlen, res;
+
+#ifdef RECORD
+   if(playback)
+     return 0;
+#endif
 
    MZERO(&from, sizeof(from));	/* don't get garbage if really broken */
 
@@ -3448,7 +3654,13 @@ recvUdpConn()
 int
 closeUdpConn()
 {
-   V_UDPDIAG(("Closing UDP socket\n"));
+  V_UDPDIAG(("Closing UDP socket\n"));
+
+#ifdef RECORD
+  if(playback)
+    return 0;
+#endif
+
    if (udpSock < 0) {
       fprintf(stderr, "netrek: tried to close a closed UDP socket\n");
       return (-1);
@@ -3520,7 +3732,7 @@ handleSequence(packet)
 	 /* accept */
 	 if (newseq != sequence + 1) {
 	    udpDropped += (newseq - sequence) - 1;
-	    udpTotal += (newseq - sequence) - 1;	/* want TOTAL packets */
+	    udpTotal += (newseq - sequence) - 1;       /* want TOTAL packets */
 	    recent_dropped += (newseq - sequence) - 1;
 	    recent_count += (newseq - sequence) - 1;
 	    if (udpWin)
@@ -3585,6 +3797,12 @@ handleShortReply(packet)
       optionredrawoption(&recv_short_opt);
       spwinside = ntohs(packet->winside);
       spgwidth = ntohl(packet->gwidth);
+
+#ifdef RECORD_DEBUG
+      if(recordGame || playback)
+	fprintf(RECORDFD, "Receiving Short Packet Version %d\n", shortversion);
+      else
+#endif
       printf("Receiving Short Packet Version %d\n", shortversion);
       break;
 
@@ -3842,6 +4060,7 @@ sendShortReq(state)
    }
    sendServerPacket((struct shortreq_cpacket *) & shortReq);
 }
+
 
 /* S_P2 */
 static void
@@ -4152,6 +4371,20 @@ printf("status before %s, after %s\n",
 
 #endif
 
+static int sock_read(sock, buff, size)
+     int sock, size;
+     char *buff;
+{
+
+#ifdef RECORD
+  if (playback)
+    return readPlayback(recordFile, buff, size);
+#endif
+
+  return read(sock, buff, size);
+}
+
+
 #ifdef PACKET_LOG
 static int      Max_CPS = 0;
 static int      Max_CPSout = 0;
@@ -4232,6 +4465,8 @@ Log_OPacket(tpe, size)
       cp_msg_size += size;	/* HW */
 #endif
 }
+
+
 /* print out out the cool information on packet logging */
 void
 Dump_Packet_Log_Info()
@@ -4318,10 +4553,11 @@ Dump_Packet_Log_Info()
       printf("%3d %5d    %4d   %9d   %3.2f\n",
 	     i, outpacket_log[i], sizes[i], calc_temp,
 	     (float) (calc_temp * 100 / outtotal_bytes));
-   }
+  }
 #endif
 }
 #endif
+
 
 #if 0
 monpoprate(plan, packet)
@@ -4351,5 +4587,6 @@ monpoprate(plan, packet)
    /* FAILURE, beam down on owned planet */
    new_armies += ntohl(packet->armies) - plan->pl_armies;
 
-}
+
 #endif
+

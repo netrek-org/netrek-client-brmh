@@ -22,6 +22,10 @@
 #include <sys/file.h>
 #include "netrek.h"
 
+#ifdef RECORD
+#include "recorder.h"
+#endif
+
 jmp_buf         env;
 
 void	gb();
@@ -410,10 +414,6 @@ read_servers()
 
 #endif				/* GATEWAY */
 
-#ifdef RECORD
-char           *recordFileName = NULL;	/* Added recorder <isae> */
-#endif
-
 #ifdef EM
 void            handle_segfault();
 void            handle_exception();
@@ -457,7 +457,6 @@ main(argc, argv)
    int		   usemeta = 0;
    char		   *metafile = NULL;
 #endif
-
    program = argv[0];
 
 #ifdef GATEWAY
@@ -591,13 +590,13 @@ main(argc, argv)
 				 * to flag that it should override xtrekrc */
 	    printf("Using standard binary verification\n");
 	    break;
-	 case 'R':
+	 case 'V':
 	    RSA_Client = -2;	/* will be reset leter, set negative here *
 				 * to flag that it should override xtrekrc */
 	    printf("Using RSA binary verification\n");
 	    break;
 #else
-	 case 'R':
+	 case 'V':
 	    printf("This client does not support RSA binary verification\n");
 	 case 'o':
 	    printf("Using standard binary verification\n");
@@ -645,6 +644,10 @@ main(argc, argv)
 
 	 case 'D':
 	       debug++;
+	       if(debug == 2) {
+		 printf("udpDebug turned on\n");
+		 udpDebug = 1;
+	       }
 	       break;
 #ifdef PACKET_LOG
 	 case 'P':
@@ -652,11 +655,22 @@ main(argc, argv)
 	    break;
 #endif
 #ifdef RECORD
-	 case 'f':
+	 case 'R':
 	    recordFileName = *argv;
 	    argv++;
 	    argc--;
+	    recordGame = 1;
 	    break;
+	 case 'F':
+	   recordFileName = *argv;
+	   argv++;
+	   argc--;
+	   playback = 1;
+	   break;
+	 case 'Z':
+	   paradise_compat = 1;
+	   shortversion = OLDSHORTVERSION;
+	   break;
 #endif
 #ifdef LOGMESG
 	 case 'l':
@@ -696,6 +710,17 @@ main(argc, argv)
       }
    }
 
+#ifdef RECORD
+   if(paradise_compat)
+     fprintf(RECORDFD, "Paradise compabitiblity mode enabled (shortversion=%d).\n", shortversion);
+
+   if(recordGame && playback) {
+     fprintf(RECORDFD, 
+	     "Record Game (-f) and Playback (-F) are mutually exclusive!\n");
+     exit(1);
+   }
+#endif
+
 #ifdef EXPIRATIONDATE
    {
       time_t          nowtime;
@@ -712,17 +737,6 @@ main(argc, argv)
    }
 #endif
 
-#ifdef RECORD
-   /* open game recorder file */
-   if (recordFileName != NULL) {
-      recordFile = fopen(recordFileName, "wb");
-      if (recordFile == NULL) {
-	 perror(recordFileName);
-	 exit(1);
-
-      }
-   }
-#endif
 #ifdef LOGMESG
    /* open messages logfile */
    if (logMess){
@@ -756,17 +770,33 @@ main(argc, argv)
       printUsage(name);
       exit(1);
    }
+
+#ifdef RECORD
+   /* playback / record start used to be here */
+#endif
+
+
 #ifdef SHOW_DEFAULTS
    show_defaults("B-startup", "metaDefault", "off",
       "If no server argument, use metaserver.");
 #endif
+
+#ifdef RECORD
+   if(playback) {
+     noargs = 0;
+     usemeta = 0;
+     serverName = "playback";
+     W_Initialize(display);	/* moved from newwin.c */
+   } else
+#endif
+ {
    if(noargs){
-      if(booleanDefault("metaDefault", 0))
-	 usemeta = 1;
-      else if(!getdefault("server")){ /* NEW BEHAVIOR, no arguments, show special metaserver message */
-	 printMetaInfo(name);
-	 exit(1);
-      }
+     if(booleanDefault("metaDefault", 0))
+       usemeta = 1;
+     else if(!getdefault("server")){ /* NEW BEHAVIOR, no arguments, show special metaserver message */
+       printMetaInfo(name);
+       exit(1);
+     }
    }
 
 #ifdef GATEWAY
@@ -904,6 +934,8 @@ From then on you can specify that server by doing 'netrek -h <alias>'");
    /* pick a nice set of UDP ports */
    getUdpPort();
 #endif
+ }  /* if not playback */
+
 
 #ifdef FOR_MORONS
 #ifdef SHOW_DEFAULTS
@@ -923,11 +955,39 @@ From then on you can specify that server by doing 'netrek -h <alias>'");
    login[sizeof(login) - 1] = '\0';
 
    openmem();
-   if (!passive) {
-      callServer(xtrekPort, serverName);
-   } else {
-      connectToServer(xtrekPort);
+
+#ifdef RECORD
+   if(playback) {
+#ifdef RECORD_DEBUG
+     fprintf(RECORDFD, "Calling startPlayback()...recordGame=%d\n",
+	     recordGame);
+#endif
+     startPlayback();
    }
+   else
+#endif
+  {
+#ifdef RECORD
+    if(!playback) {
+      /* Find out if we're going to record. If so, find out if the filename
+	 if ok now... it might require input if they give us an existing 
+	 filename and if we have to do this before we connect, otherwise
+	 they might ghostbust (if they take too long)
+	 */
+      if(recordGame || (recordGame = booleanDefault("recordGame", recordGame)))
+	{
+	  if(!recordFileName)
+	    recordFileName = getdefault("recordFile");
+	  check_record_filename();
+	}
+    }
+#endif
+    if (!passive) {
+       callServer(xtrekPort, serverName);
+    } else {
+       connectToServer(xtrekPort);
+    }
+  }
 #ifdef HOCKEY
 #ifdef SHOW_DEFAULTS
    show_defaults("hockey", "puckName", PUCK_NAME,
@@ -950,6 +1010,14 @@ hockey puck].");
 #ifdef FEATURE
    sendFeature("FEATURE_PACKETS", 'S', 1, 0, 0);
    sendFeature("MOTD_BITMAPS", 'C', 1, 0, 0);
+#ifdef RECORD   
+   if(paradise_compat) {
+     sendFeature("SHIP_CAP", 'S', 0, 0, 0);
+#ifdef RECORD_DEBUG
+     fprintf(RECORDFD, "Asking server for SHIP_CAP off\n");
+#endif
+   }
+#endif
 #endif
 
 #ifdef SHOW_DEFAULTS
@@ -959,6 +1027,11 @@ hockey puck].");
    non_obscure = booleanDefault("noObscureEntry", non_obscure);
 
    findslot();
+
+#ifdef RECORD_DEBUG
+   if(playback)
+     fprintf(RECORDFD, "findslot() finished\n");
+#endif
 
    lastm = mctl->mc_current;	/* unused */
 
@@ -1008,11 +1081,48 @@ on a server basis, i.e. autologin.bigbang: on");
    }
 #endif
 
+#ifdef RECORD
+   if(playback) {
+     /* Read up to the loginAccept packets, so we are in proper sync */
+     readFromServer(sock);
+#ifdef RECORD_DEBUG
+     fprintf(RECORDFD, "loginAccept scan completed\n");
+#endif
+
+     /* copied from getname */
+     MZERO(mystats, sizeof(struct stats));
+     mystats->st_tticks = 1;
+     mystats->st_flags = ST_MAPMODE + ST_NAMEMODE + ST_SHOWSHIELDS +
+       ST_KEEPPEACE + ST_SHOWLOCAL * 2 + ST_SHOWGLOBAL * 2;
+   }
+   else
+#endif
    getname(pseudo);
+
    loggedIn = 1;
+
+#ifdef RECORD_DEBUG
+   fprintf(RECORDFD, "Should be logged in now.\n");
+#endif
+
 
    /* moo does it all in readDefaults in getdefault.c */
    readDefaults();
+
+#ifdef RECORD
+   /* make sure recordGame in .xtrekrc doesn't override playback */
+   if(playback)
+     recordGame = 0;
+   else if(recordFile) {
+     /* Recorder has been activated, make sure defaults don't override
+	command line */
+     recordGame = 1;
+   }
+#endif
+
+#ifdef RECORD_DEBUG
+   fprintf(RECORDFD, "readDefaults() done\n");
+#endif
 
    /*
     * Set p_hostile to hostile, so if keeppeace is on, the guy starts off
@@ -1020,12 +1130,6 @@ on a server basis, i.e. autologin.bigbang: on");
     */
    me->p_hostile = (FED | ROM | KLI | ORI);
 
-   /*
-   sprintf(buf,
-	   "Maximum:      %2d  %3d %3d               %3d   %6d   %3d   %3d",
-	   0, 0, 0, 0, 0, 0, 0);
-   W_WriteText(tstatw, 50, 27, textColor, buf, strlen(buf), W_RegularFont);
-   */
 #ifdef unused
    me->p_planets = 0;
    me->p_genoplanets = 0;
@@ -1056,6 +1160,19 @@ on a server basis, i.e. autologin.bigbang: on");
    if (messageon)
       message_off();            /* ATM */
 
+#ifdef RECORD
+   if(playback) {
+     /* Read up to the pickOk packet, so we are in proper sync */
+     if(!not_first_entry) {
+       readFromServer(sock);
+#ifdef RECORD_DEBUG
+       fprintf(RECORDFD, "pickOk scan completed\n");
+#endif
+     }
+   }
+   else
+#endif
+ {
    /* give the player the motd and find out which team he wants */
    entrywindow(&team, &s_type);
    if (team == -1) {
@@ -1070,9 +1187,23 @@ on a server basis, i.e. autologin.bigbang: on");
 #ifdef SHOW_DEFAULTS
       finish_defaults();
 #endif
+
+#ifdef RECORD
+      if(recordGame)
+	stopRecorder();
+#endif
+
       exit(0);
    }
+ }
+
    sendVersion();
+
+#ifdef RECORD_DEBUG
+   fprintf(RECORDFD, "Calling getship, myship->s_type=%d\n",
+	   myship->s_type);
+#endif
+   
    getship(myship, myship->s_type);
 
    /* set up ship-specific keymap */
@@ -1132,6 +1263,11 @@ on a server basis, i.e. autologin.bigbang: on");
 #endif
 
    /* Get input until the player quits or dies */
+#ifdef RECORD
+   if(playback)
+     playback_input();
+   else
+#endif
    input();
 }
 
@@ -1225,11 +1361,18 @@ printUsage(prog)
    fprintf(stderr, "   [-v]                RSA version information only.\n");
    fprintf(stderr, "   [-u]                This message.\n");
    fprintf(stderr, "   [-l filename]       Record messages into 'filename'\n");
+
+#ifdef RECORD
+   fprintf(stderr, "   [-R filename]       Record game to file\n");
+   fprintf(stderr, "   [-F filename]       Playback recorded game\n");
+   fprintf(stderr, "   [-Z]                Paradise compatibility mode (for record/playback)\n");
+#endif
+
    fprintf(stderr, "\nRare options:\n");
    fprintf(stderr, "   [-s socketnum]      Specify listen socket port for manual start\n");
 #ifdef RSA
    fprintf(stderr, "   [-o]                Use old-style binary verification\n");
-   fprintf(stderr, "   [-R]                Use RSA binary verification\n");
+   fprintf(stderr, "   [-V]                Use RSA binary verification\n");
 #endif
 #ifdef FOR_MORONS
    fprintf(stderr, "   [-M]                Toggle netrek-for-morons mode\n");
@@ -1237,7 +1380,7 @@ printUsage(prog)
 #ifdef PACKET_LOG
    fprintf(stderr, "   [-P]                Log server packets, repeat for increased information\n");
 #endif
-   fprintf(stderr, "   [-D]                Debugging level (repeat to increase)\n");
+   fprintf(stderr, "   [-D]                Debugging level (use twice for UDP info)\n");
    fprintf(stderr, "\nAt runtime, select 'show help window' for a list of commands.\n");
 #ifdef XTREKRC_HELP
    fprintf(stderr, "Select 'show xtrekrc window' for a list of .netrekrc options.\n");

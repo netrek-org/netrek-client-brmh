@@ -12,7 +12,7 @@
 
 extern int      oldBless;	/* from main.c */
 #ifdef RECORD
-extern char    *recordFileName;	/* from main.c */
+#include "recorder.h"
 #endif
 
 void
@@ -23,7 +23,7 @@ readDefaults()
    int             dashboard=0;
 
    if(defaults_file)
-      printf("Reading default values from %s ...\n", defaults_file);
+     fprintf(RECORDFD, "Reading default values from %s ...\n", defaults_file);
 
    /* Read keymap */
    initkeymaps();
@@ -190,10 +190,32 @@ for default mapping and geometry (message widths 13, 32, 80 supported).");
 #ifdef RECORD
    /* My attempt to control the recorder during the game */
 #ifdef SHOW_DEFAULTS
-   show_defaults("misc", "recordGame", recordGame ? "on" : "off",
-		 "Record game (probably doesn't work -- no playback.)");
+   {
+     char ints[11];
+     show_defaults("Recorder", "recordGame", recordGame ? "on" : "off",
+		   "Record game.");
+     show_defaults("Recorder", "recordFile", "", 
+		   "Name of file to record game in.");
+     sprintf(ints, "%d", maxRecord);
+     show_defaults("Recorder", "maxRecord", ints, 
+		   "Max bytes of game to record.");
+     show_defaults("Recorder", "recordIndiv", recordIndiv ? "on" : "off",
+		   "Record individual messages.");
+     show_defaults("Recorder", "confirmOverwrite", 
+		   confirmOverwrite ? "on" : "off",
+		   "Confirm overwrite of existing file by recorder.");
+   }
 #endif
    recordGame = booleanDefault("recordGame", recordGame);
+   recordIndiv = booleanDefault("recordIndiv", recordIndiv);
+   confirmOverwrite = booleanDefault("confirmOverwrite", confirmOverwrite);
+
+   maxRecord =  intDefault("maxRecord", maxRecord);
+
+   if (recordFileName == NULL) {
+      recordFileName = getdefault("recordFile");
+   }
+
 #endif
 
    /* Numeric defaults */
@@ -287,8 +309,12 @@ for default mapping and geometry (message widths 13, 32, 80 supported).");
 #ifdef SHOW_DEFAULTS
    show_defaults("display", "sortPlayers", sortPlayers ? "on" : "off",
 		 "Sort player listings by team.");
+   show_defaults("display", "teamOrder", (!teamOrder ? "None (default)" :
+					  (teamOrder == 1 ? "First" : "Last")),
+		 "Order in which to list your team.");
 #endif
    sortPlayers = booleanDefault("sortplayers", sortPlayers);
+   teamOrder =  intDefault("teamOrder", teamOrder);
 #endif
 
 #ifdef SHOW_DEFAULTS
@@ -360,25 +386,6 @@ Don't use with 'playerlist:'");
 #endif
    updates_per_second = intDefault("updatesPerSecond", updates_per_second);
 
-#ifdef RECORD
-   /* Get the record filename and message log file from .xtrekrc */
-#ifdef SHOW_DEFAULTS
-   show_defaults("misc", "recordFile", "record-file",
-	   "Name of file to record game in (may not work -- no playback).");
-#endif
-   if (recordFileName == NULL) {
-      recordFileName = getdefault("recordFile");
-      if (recordFileName != NULL) {
-	 recordFile = fopen(recordFileName, "wb");
-	 if (recordFile == NULL) {
-	    perror(recordFileName);
-	    exit(1);
-	 }
-	 recordGame = 1;	/* We want to record the game */
-      } else
-	 recordGame = 0;
-   }
-#endif
 #ifdef FEATURE
    {
       char           *macrokey_s = getdefault("macroKey");

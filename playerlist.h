@@ -10,6 +10,7 @@
 extern void redraw_playerlist_header P_((void));
 extern void playerlist P_((void));
 extern void Sorted_playerlist2 P_((void));
+extern void Sorted_playerlist3 P_((void));
 extern void playerlist2 P_((void));
 extern void playerlist3 P_((register int i));
 

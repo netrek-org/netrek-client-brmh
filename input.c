@@ -18,6 +18,10 @@
 #include <errno.h>
 #include "netrek.h"
 
+#ifdef RECORD
+#include "recorder.h"
+#endif
+
 #if __STDC__ || defined(__cplusplus)
 #define P_(s) s
 #else
@@ -377,6 +381,10 @@ input()
    register
    int             doflush = 0;
 
+#ifdef RECORD_DEBUG
+   fprintf(RECORDFD, "input() called\n");  /* DBP */
+#endif
+
    while (1) {
 
       FD_ZERO(&readfds);
@@ -578,6 +586,13 @@ keyaction(data)
 	 data->y = y;
       }
    }
+
+#ifdef RECORD
+   if(playback)
+     if(playback_keyaction(data))  /* was a playback command */
+       return;
+#endif
+
 #ifdef FEATURE
    if (key == macrokey)
       key = 'X';
@@ -1108,12 +1123,17 @@ keyaction(data)
       }
       break;
 #endif
-#ifdef nodef			/* my attempt to control the recorder during
+#ifdef RECORD			/* my attempt to control the recorder during
 				 * the game <isae> */
    case '`':
       recordGame = !recordGame;
-      if (recordGame)
-	 warning("Recorder is ON, Captain!");
+      if (recordGame) {
+	if(!recordFile) {
+	  warning("You'll have to start the game in record mode for this option, Captain!");
+	  recordGame = 0;
+	}
+	else warning("Recorder is ON, Captain!");
+      }
       else
 	 warning("Recorder is OFF, Captain!");
       break;

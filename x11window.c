@@ -3356,3 +3356,17 @@ W_ChangeBackground(win, color)
    XSetWindowBackground(W_Display, w->window, colortable[color].pixelValue);
    XClearWindow(W_Display, w->window);
 }
+
+#ifdef RECORD
+
+/* Some stupid X bug is delaying dashboard updates on playback without
+   this function. It might be linux-specific, not sure.  Maybe because in 
+   playback so many things are drawn before the W_Flush is called
+ */
+
+int W_Sync()
+{
+  XSync(W_Display, False);
+  return 0;
+}
+#endif

@@ -14,6 +14,9 @@
 #endif
 #include "netrek.h"
 
+#ifdef RECORD
+#include "recorder.h"
+#endif
 
 void
 stline(flag)
@@ -187,6 +190,19 @@ stline(flag)
       buf++;
    *buf++ = '0' + ((me->p_etemp / 10) % 10);
 
+#ifdef RECORD
+   if(playback && redraw) {
+     *buf++ = ' ';
+     *buf++ = ' ';
+     *buf++ = ' ';
+     *buf++ = ' ';
+     strcpy(buf, "Update");
+     W_WriteText(tstatw, 50, 5 + W_Textheight + 1, textColor, buf1, 74,
+		 W_RegularFont);
+   }
+   else
+#endif   
+
    W_WriteText(tstatw, 50, 5 + W_Textheight + 1, textColor, buf1, 64,
 	       W_RegularFont);
 }
@@ -207,9 +223,19 @@ updateMaxStats(redraw)
    int             mykills = (int) (10. * kills);
 
    /* don't really need a update if nothing's changed! */
+
+#ifdef RECORD_DEBUG
+   /* fprintf(RECORDFD, "updateMaxStats, redraw=%d...", redraw); */
+#endif
+
    if (!redraw && lastkills == mykills && lastship == me->p_ship.s_type &&
        lastdamage == me->p_damage)
+     {
+#ifdef RECORD_DEBUG
+       /* fprintf(RECORDFD, "blowing function off.\n"); */
+#endif
       return;
+     }
 
    lastkills = mykills;
    lastdamage = me->p_damage;
@@ -232,7 +258,16 @@ updateMaxStats(redraw)
    if (maxspeed < 0)
       maxspeed = 0;
 
-
+#ifdef RECORD
+   if(playback) {
+     if(redraw) {
+       strcpy(buf, "Flags        Warp Dam Shd Torps  Kills Armies   Fuel  Wtemp Etemp  ");
+       playback_status(&buf[67]);
+     }
+     else strcpy(buf, "Flags        Warp Dam Shd Torps  Kills Armies   Fuel  Wtemp Etemp  ");
+   }
+   else
+#endif
    if (tclock)
       strcpy(buf, "Flags        Warp Dam Shd Torps  Kills Armies   Fuel  Wtemp Etemp  Time");
    else
@@ -284,6 +319,12 @@ updateMaxStats(redraw)
 #endif
    W_WriteText(tstatw, 50, 5 + 2 * (W_Textheight + 1), textColor, buf,
 	       strlen(buf), W_RegularFont);
+
+#ifdef RECORD_DEBUG
+   /* fprintf(RECORDFD, "function executed\n"); */
+#endif
+
+
 }
 
 
@@ -296,6 +337,13 @@ run_clock(update)
    static int      lasttime;
    long            curtime;
    struct tm      *tm;
+
+#ifdef RECORD
+   if(playback) {
+     playback_clock();
+     return;
+   }
+#endif
 
    time(&curtime);
    if (tclock == 1) {
@@ -326,6 +374,8 @@ run_clock(update)
 #else
    sprintf(timebuf, "%2d:%02d:%02d", tm->tm_hour, tm->tm_min, tm->tm_sec);
 #endif
+
+
    W_WriteText(tstatw, 50 + (66 * W_Textwidth), 27, W_Yellow, timebuf,
 	       (tclock == 2) ? 8 : 5,
 	       W_BoldFont);
@@ -343,6 +393,11 @@ void
 db_redraw(fr)
     int             fr;
 {
+
+#ifdef RECORD_DEBUG
+  /* fprintf(RECORDFD, "db_redraw(%d)\n", fr); */
+#endif
+
    switch (dashboardStyle) {
    case 0:
       stline(fr);

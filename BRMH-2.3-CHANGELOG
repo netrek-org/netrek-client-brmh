@@ -1,3 +1,37 @@
+Version 2.3 by Dave Pinkney, all others by Ted Hadley.
+
+2.3:	
+	* Fixed the observed-cloaker problem (they were invisible to
+	  a locked on observer).
+        * Added a new xtrekrc resource for the sorted player list:
+	  teamOrder (you can list your team first or last).
+        * Added full packet recording (except MOTD, MOTD_PIC, and
+	  RSA_KEY), with a paradise compatibility option.  Record
+          resources: recordGame, recordFile, maxRecord, recordIndiv,
+	  confirmOverwrite
+        * Added playback abilities for recorded games
+
+# Order your team in the sorted player list (requires sortPlayers: on)
+# Mostly useful for people with 1024x768 resolution
+# 0 -- disabled, 1 -- list your team first, 2 -- list your team last
+teamOrder:			0
+
+# Record game by default?  (Can also use command line option)
+recordGame:			off
+
+# File to record to
+recordFile:			noFileName.trk
+
+# How many bytes to record?  0 for unlimited size
+maxRecord:			0
+
+# Record individual (personal) message?
+recordIndiv:			off
+
+# Require confirmation before recording over existing file?
+confirmOverwrite:		on
+
+
 2.2p3:
 	* decreased weapon temp and engine temp bars to max out at
 	  100%.  (suggested by John Salomon <john@csua.berkeley.edu>)

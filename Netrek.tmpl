@@ -7,12 +7,14 @@
                CCOPTIONS =                 
 
                     CC = gcc
+/**
 #if 1
            CDEBUGFLAGS = -funroll-loops -finline-functions -ffast-math -fforce-mem -Wall -O2 
 #else
            CDEBUGFLAGS = -g
 #endif
-#if 0
+**/
+#if 1
            CDEBUGFLAGS = -funroll-loops -finline-functions -ffast-math -fforce-mem -fomit-frame-pointer -Wall -O2 
 #endif
 
@@ -21,8 +23,8 @@
 
 #if RSA_
 /* RSA paths */
-                MP_LIB = -L/dv/ub/hadley/netrek/lib -lgmp
-            MP_INCLUDE = -I/dv/ub/hadley/netrek/include
+            MP_LIB = -L../gmp-1.3.2 -lgmp -lmp
+            MP_INCLUDE = -I../gmp-1.3.2
 
 /* RSA boxes -- put here because the default # of boxes might change */
 
@@ -33,7 +35,7 @@
 #endif /* _RSA_ */
 	   
 /* BIN for binary installation if desired */
-            NETREK_BIN = /i0/dh/ua/hadley/alternate/net/bin
+NETREK_BIN =
 
               /* OPTIONS/FEATURES */
 
@@ -88,7 +90,7 @@
 
 #define MultiLineMacros	YES		/* multi-line macros (not implmnted) */
 
-#define FontBitmaps	YES		/* Requires special fonts to run.
+#define FontBitmaps	NO		/* Requires special fonts to run.
 					   Available seperately as
 					   BRMH-FONTBASED-fonts.tar.gz.
 					   Not compatible with DynamicBitmaps */
@@ -126,8 +128,10 @@
 #define Debug		NO		/* variables debugging */
 #define UsePortSwap	NO		/* sometimes needed */
 	 /* misc */
-#define Record		NO		/* game record option (but no 
+#define Record		YES		/* game record option (but no f
 					   playback) */
+#define RecordDebug	NO		/* Debug Recording */
+
 #define BD_		NO		/* minor borg detection (not release) */
 #define SPTest		NO		/* client-to-client comparisons (-pg)*/
 #define Xtra		NO		/* extra chance for x input (broke) */
@@ -236,6 +240,10 @@ LOGMESG=-DLOGMESG
 #endif
 #if Record
 RECORD=-DRECORD
+#endif
+#if RecordDebug
+RECORD=-DRECORD
+RECORD_DEBUG=-DRECORD_DEBUG
 #endif
 
 #if NBT_

@@ -19,6 +19,11 @@
 #include <stdio.h>
 #include "netrek.h"
 
+#ifdef RECORD
+#include "recorder.h"
+#endif
+
+
 #define DB_NOFILL 0
 #define DB_LINE 1
 #define DB_FILL 2
@@ -268,16 +273,37 @@ db_flags(fr)
       }
       old_kills = kills;
    }
+
+#ifdef RECORD
+   if(playback && fr) {
+     strcpy(buf, "Update");
+     W_WriteText(tstatw, 458, 17,textColor, buf, 6, W_RegularFont);
+   }
+#endif
+
    if (fr || me->p_ntorp != old_torp) {
       if (me->p_ntorp > 0) {
 	 W_WriteText(tstatw, 346, 30, textColor, "Torps:", 6, W_RegularFont);
 	 buf[0] = me->p_ntorp % 10 + '0';
 	 W_WriteText(tstatw, 386, 30, textColor, buf, 1, W_RegularFont);
       } else {
+#ifdef RECORD
+	if(playback)
+	  W_ClearArea(tstatw, 346, 30, 54, 10);  /* Leave playback status */
+	else
+#endif
 	 W_ClearArea(tstatw, 346, 30, 96, 10);
       }
       old_torp = me->p_ntorp;
    }
+
+#ifdef RECORD
+   if(playback && fr) {
+     playback_status(buf);
+     W_WriteText(tstatw, 400, 30, textColor, buf, 7, W_RegularFont);
+   }
+#endif
+
 }
 
 void

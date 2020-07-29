@@ -28,6 +28,7 @@
 #define F_PARADISE	'P'
 #define F_HOCKEY	'H'
 #define F_BRONCO	'B'
+#define F_EMPIRE	'E'
 #define F_DOGFIGHT	'F'
 
 #define F_INL_HOME	'h'
@@ -131,6 +132,8 @@ flagstring(f)
 	 return "Hockey";
       case F_BRONCO:
 	 return "Standard";
+      case F_EMPIRE:
+	 return "Empire";
       case F_DOGFIGHT:
 	 return "Dogfight";
       case F_CHAOS:

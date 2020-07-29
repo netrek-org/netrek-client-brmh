@@ -28,7 +28,7 @@
 #define F_PARADISE	'P'
 #define F_HOCKEY	'H'
 #define F_BRONCO	'B'
-#define F_EMPIRE        'E'
+#define F_EMPIRE	'E'
 #define F_DOGFIGHT	'F'
 
 #define F_INL_HOME	'h'
